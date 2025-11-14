@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BlinkSense - Complete System</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #ffeef8 0%, #e8f4fd 100%);
+            min-height: 100vh;
+        }
+        .navbar {
+            background: linear-gradient(90deg, #ffb3d9 0%, #b3d9ff 100%);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .nav-brand { font-size: 1.8rem; font-weight: bold; color: #4a4a4a; }
+        .nav-menu { display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
+        .nav-item {
+            padding: 0.5rem 1rem;
+            background: rgba(255,255,255,0.3);
+            border-radius: 20px;
+            cursor: pointer;
+            border: none;
+            color: #4a4a4a;
+        }
+        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.6); }
+        .container { max-width: 1200px; margin: 2rem auto; padding: 0 2rem; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .card {
+            background: rgba(255,255,255,0.8);
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .video-container { text-align: center; margin: 2rem 0; }
+        #video {
+            width: 640px;
+            height: 480px;
+            border-radius: 15px;
+            background: #000;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        .status {
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 10px;
+            font-weight: bold;
+            text-align: center;
+        }
+        .status-safe { background: #d4edda; color: #155724; }
+        .status-drowsy { background: #f8d7da; color: #721c24; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; }
+        .chart-container { height: 300px; margin: 1rem 0; }
+        .alert-item {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 5px;
+        }
+        .slider { width: 100%; height: 8px; border-radius: 5px; background: #ddd; }
+        .table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+        .table th, .table td { padding: 1rem; text-align: left; border-bottom: 1px solid #ddd; }
+        .table th { background: #f8f9fa; }
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            background: linear-gradient(45deg, #ff69b4, #87ceeb);
+            color: white;
+            margin: 0.5rem;
+        }
+        .start-btn {
+            padding: 1rem 2rem;
+            font-size: 1.2rem;
+            background: linear-gradient(45deg, #ff69b4, #87ceeb);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">BlinkSense - Driver Drowsiness Detection</div>
+        <div class="nav-menu">
+            <button class="nav-item active" onclick="showPage('home')">Home</button>
+            <button class="nav-item" onclick="showPage('dashboard')">Dashboard</button>
+            <button class="nav-item" onclick="showPage('alerts')">Alerts</button>
+            <button class="nav-item" onclick="showPage('analytics')">Analytics</button>
+            <button class="nav-item" onclick="showPage('settings')">Settings</button>
+            <button class="nav-item" onclick="showPage('storage')">Storage</button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <!-- HOME PAGE -->
+        <div id="home" class="page active">
+            <div class="card">
+                <h2>Real-Time Drowsiness Detection</h2>
+                <div class="video-container">
+                    <video id="video" autoplay muted style="position: absolute; z-index: 1;"></video>
+                    <canvas id="canvas" style="position: absolute; z-index: 2; pointer-events: none;"></canvas>
+                </div>
+                <button class="start-btn" onclick="startDetection()">Start Detection</button>
+                <div id="status" class="status status-safe">Click Start Detection to begin monitoring</div>
+                <div style="text-align: center; font-size: 20px; margin: 10px 0;">
+                    <span id="timer">Closed Time: 0.0s</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- DASHBOARD PAGE -->
+        <div id="dashboard" class="page">
+            <div class="card">
+                <h2>Real-Time Dashboard</h2>
+                <div class="grid">
+                    <div>
+                        <h3>Eye State Timeline</h3>
+                        <div class="chart-container">
+                            <canvas id="eyeChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <h3>Detection Statistics</h3>
+                        <div class="chart-container">
+                            <canvas id="statsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALERTS PAGE -->
+        <div id="alerts" class="page">
+            <div class="card">
+                <h2>Alert History</h2>
+                <div id="alertsList">
+                    <div class="alert-item">
+                        <strong>No alerts yet</strong><br>
+                        Start detection to monitor for drowsiness...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANALYTICS PAGE -->
+        <div id="analytics" class="page">
+            <div class="card">
+                <h2>Detailed Analytics</h2>
+                <div class="grid">
+                    <div>
+                        <h3>Daily Activity</h3>
+                        <div class="chart-container">
+                            <canvas id="dailyChart"></canvas>
+                        </div>
+                    </div>
+                    <div>
+                        <h3>Drowsiness Patterns</h3>
+                        <div class="chart-container">
+                            <canvas id="patternChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS PAGE -->
+        <div id="settings" class="page">
+            <div class="card">
+                <h2>Detection Settings</h2>
+                <div style="margin: 1rem 0;">
+                    <label>Eye Detection Sensitivity: <span id="sensitivityValue">100</span></label>
+                    <input type="range" id="sensitivity" class="slider" min="50" max="150" value="100">
+                </div>
+                <div style="margin: 1rem 0;">
+                    <label>Drowsiness Threshold: <span id="thresholdValue">2.0</span> seconds</label>
+                    <input type="range" id="threshold" class="slider" min="1" max="5" step="0.5" value="2.0">
+                </div>
+                <button class="btn" onclick="saveSettings()">Save Settings</button>
+            </div>
+        </div>
+
+        <!-- STORAGE PAGE -->
+        <div id="storage" class="page">
+            <div class="card">
+                <h2>Data Management</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Session Duration</th>
+                            <th>Alerts Count</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>2024-01-15</td>
+                            <td>45 minutes</td>
+                            <td>3 alerts</td>
+                            <td><button class="btn">Download</button></td>
+                        </tr>
+                        <tr>
+                            <td>2024-01-14</td>
+                            <td>32 minutes</td>
+                            <td>1 alert</td>
+                            <td><button class="btn">Download</button></td>
+                        </tr>
+                        <tr>
+                            <td>2024-01-13</td>
+                            <td>28 minutes</td>
+                            <td>0 alerts</td>
+                            <td><button class="btn">Download</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let video, stream;
+        let isDetecting = false;
+        let eyeClosedStart = null;
+        let alertCount = 0;
+        let lastBrightness = 0;
+        let alerts = [];
+        let detectionData = [];
+        let eyeChart, statsChart, dailyChart, patternChart;
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            
+            document.getElementById(pageId).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (pageId === 'dashboard') initDashboard();
+            if (pageId === 'analytics') initAnalytics();
+        }
+
+        async function startDetection() {
+            try {
+                video = document.getElementById('video');
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                
+                isDetecting = true;
+                document.querySelector('.start-btn').textContent = 'Detection Active';
+                document.querySelector('.start-btn').disabled = true;
+                document.getElementById('status').textContent = 'Detection Started - Keep eyes open';
+                
+                detectEyes();
+            } catch (err) {
+                alert('Camera access denied. Please allow camera and try again.');
+            }
+        }
+
+        function detectEyes() {
+            if (!isDetecting) return;
+
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Detect face region using simple edge detection
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            // Find face boundaries
+            let faceFound = false;
+            let faceX = 0, faceY = 0, faceWidth = 0, faceHeight = 0;
+            
+            // Simple face detection by finding skin-colored regions
+            for (let y = canvas.height * 0.1; y < canvas.height * 0.9; y += 20) {
+                for (let x = canvas.width * 0.1; x < canvas.width * 0.9; x += 20) {
+                    const index = (Math.floor(y) * canvas.width + Math.floor(x)) * 4;
+                    const r = data[index];
+                    const g = data[index + 1];
+                    const b = data[index + 2];
+                    
+                    // Detect skin tone
+                    if (r > 95 && g > 40 && b > 20 && r > g && r > b && Math.abs(r - g) > 15) {
+                        if (!faceFound) {
+                            faceX = x - 50;
+                            faceY = y - 50;
+                            faceWidth = 100;
+                            faceHeight = 120;
+                            faceFound = true;
+                        }
+                    }
+                }
+            }
+            
+            let eyesDetected = 0;
+            let eyesClosed = false;
+            
+            if (faceFound) {
+                // Draw face rectangle
+                ctx.strokeStyle = '#ff69b4';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(faceX, faceY, faceWidth, faceHeight);
+                
+                // Eye regions within face
+                const leftEyeX = faceX + faceWidth * 0.2;
+                const rightEyeX = faceX + faceWidth * 0.65;
+                const eyeY = faceY + faceHeight * 0.35;
+                const eyeWidth = faceWidth * 0.15;
+                const eyeHeight = faceHeight * 0.1;
+                
+                // Analyze left eye
+                let leftEyeBrightness = 0;
+                let leftPixelCount = 0;
+                
+                for (let y = eyeY; y < eyeY + eyeHeight; y += 2) {
+                    for (let x = leftEyeX; x < leftEyeX + eyeWidth; x += 2) {
+                        if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
+                            const index = (Math.floor(y) * canvas.width + Math.floor(x)) * 4;
+                            const brightness = (data[index] + data[index + 1] + data[index + 2]) / 3;
+                            leftEyeBrightness += brightness;
+                            leftPixelCount++;
+                        }
+                    }
+                }
+                
+                // Analyze right eye
+                let rightEyeBrightness = 0;
+                let rightPixelCount = 0;
+                
+                for (let y = eyeY; y < eyeY + eyeHeight; y += 2) {
+                    for (let x = rightEyeX; x < rightEyeX + eyeWidth; x += 2) {
+                        if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
+                            const index = (Math.floor(y) * canvas.width + Math.floor(x)) * 4;
+                            const brightness = (data[index] + data[index + 1] + data[index + 2]) / 3;
+                            rightEyeBrightness += brightness;
+                            rightPixelCount++;
+                        }
+                    }
+                }
+                
+                const leftAvgBrightness = leftPixelCount > 0 ? leftEyeBrightness / leftPixelCount : 0;
+                const rightAvgBrightness = rightPixelCount > 0 ? rightEyeBrightness / rightPixelCount : 0;
+                
+                // Determine if eyes are open (brighter) or closed (darker)
+                const leftEyeOpen = leftAvgBrightness > 80;
+                const rightEyeOpen = rightAvgBrightness > 80;
+                
+                if (leftEyeOpen) eyesDetected++;
+                if (rightEyeOpen) eyesDetected++;
+                
+                // Draw eye rectangles
+                ctx.strokeStyle = leftEyeOpen ? '#87ceeb' : '#ff0000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(leftEyeX, eyeY, eyeWidth, eyeHeight);
+                
+                ctx.strokeStyle = rightEyeOpen ? '#87ceeb' : '#ff0000';
+                ctx.strokeRect(rightEyeX, eyeY, eyeWidth, eyeHeight);
+                
+                // Eyes are closed if both eyes have low brightness
+                eyesClosed = !leftEyeOpen && !rightEyeOpen;
+                
+                // Update eye count display
+                document.getElementById('eye-count').textContent = eyesDetected;
+            }
+            
+            const currentTime = Date.now();
+            
+            if (eyesClosed && faceFound) {
+                if (eyeClosedStart === null) {
+                    eyeClosedStart = currentTime;
+                }
+                
+                const closedDuration = (currentTime - eyeClosedStart) / 1000;
+                document.getElementById('closed-time').textContent = closedDuration.toFixed(1);
+                
+                if (closedDuration >= 2.0) {
+                    triggerAlert();
+                } else {
+                    document.getElementById('status-text').textContent = `Eyes Closed - ${closedDuration.toFixed(1)}s`;
+                }
+            } else {
+                eyeClosedStart = null;
+                document.getElementById('closed-time').textContent = '0.0';
+                document.getElementById('status-text').textContent = faceFound ? 'Eyes Open - Safe' : 'No Face Detected';
+            }
+            
+            detectionData.push({
+                time: new Date().toLocaleTimeString(),
+                eyesOpen: !eyesClosed
+            });
+            
+            if (detectionData.length > 20) {
+                detectionData.shift();
+            }
+            
+            setTimeout(detectEyes, 100);
+        }
+
+        function triggerAlert() {
+            alertCount++;
+            document.getElementById('status').className = 'status status-drowsy';
+            document.getElementById('status').textContent = 'DROWSY! WAKE UP!';
+            
+            const alert = {
+                time: new Date().toLocaleTimeString(),
+                message: `Drowsiness detected - Alert ${alertCount}`
+            };
+            alerts.push(alert);
+            
+            updateAlertsDisplay();
+            playAlertSound();
+            
+            setTimeout(() => {
+                eyeClosedStart = null;
+            }, 3000);
+        }
+
+        function updateAlertsDisplay() {
+            const alertsList = document.getElementById('alertsList');
+            if (alerts.length === 0) {
+                alertsList.innerHTML = '<div class="alert-item"><strong>No alerts yet</strong><br>Start detection to monitor...</div>';
+            } else {
+                alertsList.innerHTML = alerts.map(alert => 
+                    `<div class="alert-item"><strong>${alert.time}</strong><br>${alert.message}</div>`
+                ).join('');
+            }
+        }
+
+        function playAlertSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 1);
+        }
+
+        function initDashboard() {
+            if (eyeChart) eyeChart.destroy();
+            if (statsChart) statsChart.destroy();
+            
+            const ctx1 = document.getElementById('eyeChart').getContext('2d');
+            eyeChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: detectionData.map(d => d.time),
+                    datasets: [{
+                        label: 'Eyes Open',
+                        data: detectionData.map(d => d.eyesOpen ? 1 : 0),
+                        borderColor: '#87ceeb',
+                        backgroundColor: 'rgba(135, 206, 235, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, max: 1 } }
+                }
+            });
+            
+            const ctx2 = document.getElementById('statsChart').getContext('2d');
+            statsChart = new Chart(ctx2, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Eyes Open', 'Eyes Closed'],
+                    datasets: [{
+                        data: [85, 15],
+                        backgroundColor: ['#87ceeb', '#ffb3d9']
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        function initAnalytics() {
+            if (dailyChart) dailyChart.destroy();
+            if (patternChart) patternChart.destroy();
+            
+            const ctx3 = document.getElementById('dailyChart').getContext('2d');
+            dailyChart = new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Driving Hours',
+                        data: [2, 3, 1, 4, 2, 5, 3],
+                        backgroundColor: '#ffb3d9'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+            
+            const ctx4 = document.getElementById('patternChart').getContext('2d');
+            patternChart = new Chart(ctx4, {
+                type: 'line',
+                data: {
+                    labels: ['6AM', '9AM', '12PM', '3PM', '6PM', '9PM'],
+                    datasets: [{
+                        label: 'Drowsiness Events',
+                        data: [1, 0, 2, 3, 1, 0],
+                        borderColor: '#ff69b4',
+                        backgroundColor: 'rgba(255, 105, 180, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        function saveSettings() {
+            alert('Settings saved successfully!');
+        }
+
+        document.getElementById('sensitivity').addEventListener('input', function() {
+            document.getElementById('sensitivityValue').textContent = this.value;
+        });
+
+        document.getElementById('threshold').addEventListener('input', function() {
+            document.getElementById('thresholdValue').textContent = this.value;
+        });
+
+        setTimeout(initDashboard, 1000);
+    </script>
+</body>
+</html>

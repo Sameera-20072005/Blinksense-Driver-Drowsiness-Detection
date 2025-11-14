@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Eye Detection</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        #video { width: 640px; height: 480px; border: 2px solid #000; }
+        #canvas { position: absolute; top: 0; left: 0; width: 640px; height: 480px; }
+        .container { position: relative; display: inline-block; }
+        .status { margin: 20px; padding: 15px; border-radius: 10px; font-weight: bold; }
+        .safe { background: #d4edda; color: #155724; }
+        .drowsy { background: #f8d7da; color: #721c24; }
+        .debug { background: #f8f9fa; padding: 10px; margin: 10px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>Eye Detection Test</h1>
+    <div class="container">
+        <video id="video" autoplay muted></video>
+        <canvas id="canvas"></canvas>
+    </div>
+    <button onclick="startTest()">Start Test</button>
+    <div id="status" class="status safe">Click Start Test</div>
+    <div id="debug" class="debug">Debug info will appear here...</div>
+
+    <script>
+        let video, canvas, ctx, isRunning = false;
+
+        async function startTest() {
+            video = document.getElementById('video');
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+            
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            
+            video.onloadedmetadata = () => {
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                isRunning = true;
+                detectLoop();
+            };
+        }
+
+        function detectLoop() {
+            if (!isRunning) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(video, 0, 0);
+            
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            // Eye regions
+            const leftEyeX = canvas.width * 0.3;
+            const rightEyeX = canvas.width * 0.6;
+            const eyeY = canvas.height * 0.4;
+            const eyeW = canvas.width * 0.1;
+            const eyeH = canvas.height * 0.05;
+            
+            let leftBrightness = 0, rightBrightness = 0;
+            let leftPixels = 0, rightPixels = 0;
+            
+            // Sample left eye
+            for (let y = eyeY; y < eyeY + eyeH; y += 2) {
+                for (let x = leftEyeX; x < leftEyeX + eyeW; x += 2) {
+                    const i = (Math.floor(y) * canvas.width + Math.floor(x)) * 4;
+                    leftBrightness += (data[i] + data[i+1] + data[i+2]) / 3;
+                    leftPixels++;
+                }
+            }
+            
+            // Sample right eye
+            for (let y = eyeY; y < eyeY + eyeH; y += 2) {
+                for (let x = rightEyeX; x < rightEyeX + eyeW; x += 2) {
+                    const i = (Math.floor(y) * canvas.width + Math.floor(x)) * 4;
+                    rightBrightness += (data[i] + data[i+1] + data[i+2]) / 3;
+                    rightPixels++;
+                }
+            }
+            
+            const leftAvg = leftBrightness / leftPixels;
+            const rightAvg = rightBrightness / rightPixels;
+            
+            // Determine eye state
+            const threshold = 60;
+            const leftOpen = leftAvg > threshold;
+            const rightOpen = rightAvg > threshold;
+            const eyesClosed = !leftOpen && !rightOpen;
+            
+            // Draw eye rectangles
+            ctx.strokeStyle = leftOpen ? '#00ff00' : '#ff0000';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(leftEyeX, eyeY, eyeW, eyeH);
+            
+            ctx.strokeStyle = rightOpen ? '#00ff00' : '#ff0000';
+            ctx.strokeRect(rightEyeX, eyeY, eyeW, eyeH);
+            
+            // Update status
+            const statusEl = document.getElementById('status');
+            if (eyesClosed) {
+                statusEl.className = 'status drowsy';
+                statusEl.textContent = 'EYES CLOSED - DROWSY!';
+            } else {
+                statusEl.className = 'status safe';
+                statusEl.textContent = 'Eyes Open - Safe';
+            }
+            
+            // Debug info
+            document.getElementById('debug').textContent = 
+                `Left Eye: ${leftAvg.toFixed(1)} (${leftOpen ? 'Open' : 'Closed'}) | ` +
+                `Right Eye: ${rightAvg.toFixed(1)} (${rightOpen ? 'Open' : 'Closed'}) | ` +
+                `Threshold: ${threshold}`;
+            
+            setTimeout(detectLoop, 100);
+        }
+    </script>
+</body>
+</html>

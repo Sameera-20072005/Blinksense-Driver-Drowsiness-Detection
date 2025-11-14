@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Drowsiness Detection System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar { min-height: 100vh; background: #2c3e50; position: fixed; width: 250px; }
+        .sidebar a { color: #ecf0f1; text-decoration: none; padding: 15px 20px; display: block; }
+        .sidebar a:hover { background: #34495e; color: white; }
+        .sidebar a.active { background: #3498db; }
+        .main-content { margin-left: 250px; padding: 20px; }
+        .status-card { border-left: 4px solid #28a745; }
+        .alert-card { border-left: 4px solid #dc3545; }
+        .warning-card { border-left: 4px solid #ffc107; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .live-indicator { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="p-3">
+            <h4 class="text-white"><i class="fas fa-eye"></i> DrowsyGuard</h4>
+        </div>
+        <a href="#" onclick="showPage('home')" class="nav-link active">
+            <i class="fas fa-home"></i> Home
+        </a>
+        <a href="#" onclick="showPage('dashboard')" class="nav-link">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </a>
+        <a href="#" onclick="showPage('alerts')" class="nav-link">
+            <i class="fas fa-exclamation-triangle"></i> Alerts
+        </a>
+    </nav>
+
+    <main class="main-content">
+        <!-- HOME PAGE -->
+        <div id="home" class="page active">
+            <h1 class="mb-4"><i class="fas fa-eye"></i> Driver Drowsiness Detection System</h1>
+            
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3>Live Detection Control</h3>
+                            <div id="camera-status" class="mb-3 p-4" style="background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 10px;">
+                                <i class="fas fa-video fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">Ready to start detection</p>
+                            </div>
+                            <button id="startBtn" class="btn btn-success btn-lg me-2">
+                                <i class="fas fa-play"></i> Start Detection
+                            </button>
+                            <button id="stopBtn" class="btn btn-danger btn-lg" disabled>
+                                <i class="fas fa-stop"></i> Stop Detection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="card status-card mb-3">
+                        <div class="card-body">
+                            <h5><i id="statusIcon" class="fas fa-circle text-success"></i> System Status</h5>
+                            <p class="mb-0" id="systemStatus">Ready to monitor</p>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-body">
+                            <h5>Live Data</h5>
+                            <ul class="list-unstyled">
+                                <li><strong>EAR Value:</strong> <span id="currentEAR">--</span></li>
+                                <li><strong>Alert Count:</strong> <span id="alertCount">0</span></li>
+                                <li><strong>Last Alert:</strong> <span id="lastAlert">None</span></li>
+                                <li><strong>Status:</strong> <span id="detectionStatus" class="badge bg-secondary">Standby</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DASHBOARD PAGE -->
+        <div id="dashboard" class="page">
+            <h1 class="mb-4"><i class="fas fa-tachometer-alt"></i> Live Dashboard</h1>
+            
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card alert-card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
+                            <h3 id="dashAlertCount">0</h3>
+                            <p class="mb-0">Total Alerts</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card status-card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-eye fa-2x text-info mb-2"></i>
+                            <h3 id="dashEAR">--</h3>
+                            <p class="mb-0">Current EAR</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card warning-card">
+                        <div class="card-body text-center">
+                            <i class="fas fa-clock fa-2x text-success mb-2"></i>
+                            <h3 id="dashLastAlert">--</h3>
+                            <p class="mb-0">Last Alert</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card status-card">
+                        <div class="card-body text-center">
+                            <i id="dashStatusIcon" class="fas fa-shield-alt fa-2x text-secondary mb-2"></i>
+                            <h3 id="dashStatus">Standby</h3>
+                            <p class="mb-0">System Status</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-chart-line"></i> Real-Time EAR Monitoring</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="earChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALERTS PAGE -->
+        <div id="alerts" class="page">
+            <h1 class="mb-4"><i class="fas fa-exclamation-triangle"></i> Live Alerts</h1>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5>Alert Log</h5>
+                </div>
+                <div class="card-body">
+                    <div id="alertLog">
+                        <p class="text-muted">No alerts yet. Start detection to monitor.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let earChart;
+        let earData = [];
+        let timeLabels = [];
+        let updateInterval;
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (pageId === 'dashboard') {
+                initEARChart();
+            }
+        }
+
+        function initEARChart() {
+            const ctx = document.getElementById('earChart');
+            if (ctx && !earChart) {
+                earChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: timeLabels,
+                        datasets: [{
+                            label: 'EAR Value',
+                            data: earData,
+                            borderColor: '#007bff',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            tension: 0.4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { beginAtZero: true, max: 0.5 }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    // Update home page
+                    document.getElementById('currentEAR').textContent = data.current_ear || '--';
+                    document.getElementById('alertCount').textContent = data.alert_count;
+                    document.getElementById('lastAlert').textContent = data.last_alert_time || 'None';
+                    document.getElementById('systemStatus').textContent = data.system_status;
+                    
+                    // Update dashboard
+                    document.getElementById('dashAlertCount').textContent = data.alert_count;
+                    document.getElementById('dashEAR').textContent = data.current_ear || '--';
+                    document.getElementById('dashLastAlert').textContent = data.last_alert_time || '--';
+                    document.getElementById('dashStatus').textContent = data.system_status;
+                    
+                    // Update status indicators
+                    const statusIcon = document.getElementById('statusIcon');
+                    const dashStatusIcon = document.getElementById('dashStatusIcon');
+                    const detectionStatus = document.getElementById('detectionStatus');
+                    
+                    if (data.detection_active) {
+                        statusIcon.className = 'fas fa-circle text-success live-indicator';
+                        dashStatusIcon.className = 'fas fa-shield-alt fa-2x text-success mb-2 live-indicator';
+                        detectionStatus.className = 'badge bg-success';
+                        detectionStatus.textContent = 'Active';
+                        
+                        // Update chart
+                        if (earChart && data.current_ear) {
+                            const now = new Date().toLocaleTimeString();
+                            earData.push(data.current_ear);
+                            timeLabels.push(now);
+                            
+                            if (earData.length > 20) {
+                                earData.shift();
+                                timeLabels.shift();
+                            }
+                            
+                            earChart.update();
+                        }
+                    } else {
+                        statusIcon.className = 'fas fa-circle text-secondary';
+                        dashStatusIcon.className = 'fas fa-shield-alt fa-2x text-secondary mb-2';
+                        detectionStatus.className = 'badge bg-secondary';
+                        detectionStatus.textContent = 'Standby';
+                    }
+                });
+        }
+
+        document.getElementById('startBtn').addEventListener('click', function() {
+            fetch('/api/start_detection')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        this.disabled = true;
+                        document.getElementById('stopBtn').disabled = false;
+                        document.getElementById('camera-status').innerHTML = 
+                            '<i class="fas fa-video fa-3x text-success mb-3 live-indicator"></i><p class="text-success">Detection Active - Python Script Running</p>';
+                        
+                        // Start real-time updates
+                        updateInterval = setInterval(updateStatus, 1000);
+                    } else {
+                        alert('Error: ' + data.message);
+                    }
+                });
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', function() {
+            fetch('/api/stop_detection')
+                .then(response => response.json())
+                .then(data => {
+                    this.disabled = true;
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('camera-status').innerHTML = 
+                        '<i class="fas fa-video fa-3x text-muted mb-3"></i><p class="text-muted">Ready to start detection</p>';
+                    
+                    // Stop updates
+                    if (updateInterval) {
+                        clearInterval(updateInterval);
+                    }
+                });
+        });
+
+        // Initial status check
+        updateStatus();
+    </script>
+</body>
+</html>

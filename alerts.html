@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4"><i class="fas fa-exclamation-triangle"></i> Alerts History</h1>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <div class="input-group">
+            <input type="date" class="form-control" id="dateFilter">
+            <button class="btn btn-outline-secondary" type="button">Filter</button>
+        </div>
+    </div>
+    <div class="col-md-6 text-end">
+        <button class="btn btn-primary"><i class="fas fa-download"></i> Export</button>
+        <button class="btn btn-danger"><i class="fas fa-trash"></i> Clear All</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Timestamp</th>
+                        <th>Duration</th>
+                        <th>Severity</th>
+                        <th>EAR Value</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in alerts %}
+                    <tr>
+                        <td>{{ alert.time }}</td>
+                        <td>{{ alert.duration }}</td>
+                        <td>
+                            {% if alert.severity == 'High' %}
+                                <span class="badge bg-danger">{{ alert.severity }}</span>
+                            {% elif alert.severity == 'Medium' %}
+                                <span class="badge bg-warning">{{ alert.severity }}</span>
+                            {% else %}
+                                <span class="badge bg-info">{{ alert.severity }}</span>
+                            {% endif %}
+                        </td>
+                        <td>0.12</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary"><i class="fas fa-eye"></i></button>
+                            <button class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card alert-card">
+            <div class="card-body text-center">
+                <h4>{{ alerts|length }}</h4>
+                <p>Total Alerts</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card warning-card">
+            <div class="card-body text-center">
+                <h4>2</h4>
+                <p>High Severity</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card status-card">
+            <div class="card-body text-center">
+                <h4>3.0s</h4>
+                <p>Avg Duration</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

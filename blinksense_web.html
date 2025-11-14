@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlinkSense - Driver Drowsiness Detection</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Poppins', sans-serif; }
+        
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .sidebar { 
+            background: linear-gradient(180deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh; 
+            position: fixed; 
+            width: 280px;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+        }
+        
+        .sidebar .brand {
+            padding: 30px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .sidebar .brand h3 {
+            color: #fff;
+            font-weight: 700;
+            margin: 0;
+            font-size: 1.8rem;
+        }
+        
+        .sidebar .brand .tagline {
+            color: rgba(255,255,255,0.7);
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+        
+        .sidebar a { 
+            color: rgba(255,255,255,0.8); 
+            text-decoration: none; 
+            padding: 18px 25px; 
+            display: block;
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+        
+        .sidebar a:hover { 
+            background: rgba(255,255,255,0.1); 
+            color: white;
+            border-left-color: #00d4ff;
+            transform: translateX(5px);
+        }
+        
+        .sidebar a.active { 
+            background: rgba(255,255,255,0.15);
+            color: white;
+            border-left-color: #00d4ff;
+        }
+        
+        .sidebar a i {
+            width: 20px;
+            margin-right: 15px;
+        }
+        
+        .main-content { 
+            margin-left: 280px; 
+            padding: 30px;
+            min-height: 100vh;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-card { 
+            border-left: 5px solid #28a745;
+            transition: transform 0.3s ease;
+        }
+        
+        .status-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .alert-card { 
+            border-left: 5px solid #dc3545;
+            transition: transform 0.3s ease;
+        }
+        
+        .alert-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .warning-card { 
+            border-left: 5px solid #ffc107;
+            transition: transform 0.3s ease;
+        }
+        
+        .warning-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .info-card {
+            border-left: 5px solid #17a2b8;
+            transition: transform 0.3s ease;
+        }
+        
+        .info-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .page { display: none; }
+        .page.active { display: block; }
+        
+        .live-indicator { 
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse { 
+            0% { opacity: 1; transform: scale(1); } 
+            50% { opacity: 0.7; transform: scale(1.05); } 
+            100% { opacity: 1; transform: scale(1); } 
+        }
+        
+        .detection-area {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            border: 3px dashed #dee2e6;
+            transition: all 0.3s ease;
+        }
+        
+        .detection-area.active {
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border-color: #28a745;
+            border-style: solid;
+        }
+        
+        .btn-custom {
+            border-radius: 50px;
+            padding: 15px 30px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .metric-card {
+            text-align: center;
+            padding: 25px;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        
+        .page-title {
+            color: white;
+            font-weight: 700;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .alert-log {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .alert-item {
+            background: rgba(220, 53, 69, 0.1);
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="brand">
+            <h3><i class="fas fa-eye"></i> BlinkSense</h3>
+            <div class="tagline">Advanced Drowsiness Detection</div>
+        </div>
+        <a href="#" onclick="showPage('home')" class="nav-link active">
+            <i class="fas fa-home"></i> Control Center
+        </a>
+        <a href="#" onclick="showPage('dashboard')" class="nav-link">
+            <i class="fas fa-tachometer-alt"></i> Live Dashboard
+        </a>
+        <a href="#" onclick="showPage('alerts')" class="nav-link">
+            <i class="fas fa-bell"></i> Alert Monitor
+        </a>
+        <a href="#" onclick="showPage('analytics')" class="nav-link">
+            <i class="fas fa-chart-line"></i> Analytics
+        </a>
+        <a href="#" onclick="showPage('settings')" class="nav-link">
+            <i class="fas fa-cog"></i> Settings
+        </a>
+    </nav>
+
+    <main class="main-content">
+        <!-- HOME PAGE -->
+        <div id="home" class="page active">
+            <h1 class="page-title"><i class="fas fa-eye"></i> BlinkSense Control Center</h1>
+            
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <div class="glass-card">
+                        <div class="card-body">
+                            <h3 class="text-center mb-4">Detection Control</h3>
+                            <div id="detection-area" class="detection-area mb-4">
+                                <i id="detection-icon" class="fas fa-video fa-4x text-muted mb-3"></i>
+                                <h4 id="detection-text">Ready to Monitor</h4>
+                                <p id="detection-desc" class="text-muted">Click start to begin eye tracking</p>
+                            </div>
+                            <div class="text-center">
+                                <button id="startBtn" class="btn btn-success btn-custom btn-lg me-3">
+                                    <i class="fas fa-play"></i> Start Detection
+                                </button>
+                                <button id="stopBtn" class="btn btn-danger btn-custom btn-lg" disabled>
+                                    <i class="fas fa-stop"></i> Stop Detection
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="glass-card status-card mb-3">
+                        <div class="card-body">
+                            <h5><i id="statusIcon" class="fas fa-circle text-success"></i> System Status</h5>
+                            <h4 id="systemStatus" class="text-success">Ready</h4>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-card info-card">
+                        <div class="card-body">
+                            <h5><i class="fas fa-chart-bar"></i> Live Metrics</h5>
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <div class="metric-value text-primary" id="currentEAR">--</div>
+                                    <small>EAR Value</small>
+                                </div>
+                                <div class="col-6">
+                                    <div class="metric-value text-danger" id="alertCount">0</div>
+                                    <small>Alerts</small>
+                                </div>
+                            </div>
+                            <hr>
+                            <p class="mb-1"><strong>Last Alert:</strong> <span id="lastAlert">None</span></p>
+                            <p class="mb-0"><strong>Status:</strong> <span id="detectionStatus" class="badge bg-secondary">Standby</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DASHBOARD PAGE -->
+        <div id="dashboard" class="page">
+            <h1 class="page-title"><i class="fas fa-tachometer-alt"></i> Live Dashboard</h1>
+            
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="glass-card alert-card metric-card">
+                        <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
+                        <div class="metric-value text-warning" id="dashAlertCount">0</div>
+                        <p class="mb-0">Total Alerts</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="glass-card info-card metric-card">
+                        <i class="fas fa-eye fa-2x text-info mb-2"></i>
+                        <div class="metric-value text-info" id="dashEAR">--</div>
+                        <p class="mb-0">Current EAR</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="glass-card warning-card metric-card">
+                        <i class="fas fa-clock fa-2x text-warning mb-2"></i>
+                        <div class="metric-value text-warning" id="dashLastAlert">--</div>
+                        <p class="mb-0">Last Alert</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="glass-card status-card metric-card">
+                        <i id="dashStatusIcon" class="fas fa-shield-alt fa-2x text-secondary mb-2"></i>
+                        <div class="metric-value" id="dashStatus">Standby</div>
+                        <p class="mb-0">System Status</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <div class="glass-card">
+                        <div class="card-header bg-transparent">
+                            <h5><i class="fas fa-chart-line"></i> Real-Time EAR Monitoring</h5>
+                        </div>
+                        <div class="card-body">
+                            <canvas id="earChart" width="400" height="200"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ALERTS PAGE -->
+        <div id="alerts" class="page">
+            <h1 class="page-title"><i class="fas fa-bell"></i> Alert Monitor</h1>
+            
+            <div class="glass-card">
+                <div class="card-header bg-transparent">
+                    <h5><i class="fas fa-history"></i> Live Alert Log</h5>
+                </div>
+                <div class="card-body">
+                    <div id="alertLog" class="alert-log">
+                        <div class="text-center text-muted py-5">
+                            <i class="fas fa-bell-slash fa-3x mb-3"></i>
+                            <p>No alerts detected. Start monitoring to see alerts here.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANALYTICS PAGE -->
+        <div id="analytics" class="page">
+            <h1 class="page-title"><i class="fas fa-chart-line"></i> Analytics</h1>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="glass-card">
+                        <div class="card-header bg-transparent">
+                            <h5>Detection Accuracy</h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="metric-value text-success">94.2%</div>
+                            <p>Overall Accuracy</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="glass-card">
+                        <div class="card-header bg-transparent">
+                            <h5>Response Time</h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <div class="metric-value text-info">1.2s</div>
+                            <p>Average Response</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS PAGE -->
+        <div id="settings" class="page">
+            <h1 class="page-title"><i class="fas fa-cog"></i> Settings</h1>
+            
+            <div class="glass-card">
+                <div class="card-header bg-transparent">
+                    <h5>Detection Parameters</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label">EAR Threshold</label>
+                            <input type="number" class="form-control" value="0.2" step="0.01">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Alert Delay (seconds)</label>
+                            <input type="number" class="form-control" value="2.0" step="0.1">
+                        </div>
+                    </div>
+                    <button class="btn btn-success btn-custom mt-3">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let earChart;
+        let earData = [];
+        let timeLabels = [];
+        let updateInterval;
+        let alertLogContainer = document.getElementById('alertLog');
+
+        function showPage(pageId) {
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            event.target.classList.add('active');
+            
+            if (pageId === 'dashboard') {
+                initEARChart();
+            }
+        }
+
+        function initEARChart() {
+            const ctx = document.getElementById('earChart');
+            if (ctx && !earChart) {
+                earChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: timeLabels,
+                        datasets: [{
+                            label: 'EAR Value',
+                            data: earData,
+                            borderColor: '#007bff',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { beginAtZero: true, max: 0.5 }
+                        }
+                    }
+                });
+            }
+        }
+
+        function addAlertToLog(alertData) {
+            const alertItem = document.createElement('div');
+            alertItem.className = 'alert-item';
+            alertItem.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong><i class="fas fa-exclamation-triangle text-danger"></i> Drowsiness Alert</strong>
+                        <p class="mb-0">EAR: ${alertData.ear} | Time: ${alertData.time}</p>
+                    </div>
+                    <span class="badge bg-danger">Alert #${alertData.count}</span>
+                </div>
+            `;
+            
+            if (alertLogContainer.children.length === 1 && alertLogContainer.children[0].classList.contains('text-center')) {
+                alertLogContainer.innerHTML = '';
+            }
+            
+            alertLogContainer.insertBefore(alertItem, alertLogContainer.firstChild);
+            
+            if (alertLogContainer.children.length > 10) {
+                alertLogContainer.removeChild(alertLogContainer.lastChild);
+            }
+        }
+
+        function updateStatus() {
+            // Simulate real-time data since we don't have Flask running
+            const isActive = !document.getElementById('startBtn').disabled;
+            
+            if (isActive) {
+                const currentEAR = (Math.random() * 0.3 + 0.1).toFixed(3);
+                const alertCount = parseInt(document.getElementById('alertCount').textContent);
+                
+                // Update displays
+                document.getElementById('currentEAR').textContent = currentEAR;
+                document.getElementById('dashEAR').textContent = currentEAR;
+                
+                // Simulate alert
+                if (currentEAR < 0.2 && Math.random() < 0.1) {
+                    const newAlertCount = alertCount + 1;
+                    const currentTime = new Date().toLocaleTimeString();
+                    
+                    document.getElementById('alertCount').textContent = newAlertCount;
+                    document.getElementById('dashAlertCount').textContent = newAlertCount;
+                    document.getElementById('lastAlert').textContent = currentTime;
+                    document.getElementById('dashLastAlert').textContent = currentTime;
+                    
+                    addAlertToLog({
+                        ear: currentEAR,
+                        time: currentTime,
+                        count: newAlertCount
+                    });
+                }
+                
+                // Update chart
+                if (earChart) {
+                    const now = new Date().toLocaleTimeString();
+                    earData.push(parseFloat(currentEAR));
+                    timeLabels.push(now);
+                    
+                    if (earData.length > 20) {
+                        earData.shift();
+                        timeLabels.shift();
+                    }
+                    
+                    earChart.update();
+                }
+            }
+        }
+
+        document.getElementById('startBtn').addEventListener('click', function() {
+            this.disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            // Update UI
+            const detectionArea = document.getElementById('detection-area');
+            const detectionIcon = document.getElementById('detection-icon');
+            const detectionText = document.getElementById('detection-text');
+            const detectionDesc = document.getElementById('detection-desc');
+            
+            detectionArea.classList.add('active');
+            detectionIcon.className = 'fas fa-video fa-4x text-success mb-3 live-indicator';
+            detectionText.textContent = 'BlinkSense Active';
+            detectionDesc.textContent = 'Monitoring your eyes for drowsiness...';
+            
+            // Update status
+            document.getElementById('systemStatus').textContent = 'Monitoring';
+            document.getElementById('systemStatus').className = 'text-success';
+            document.getElementById('statusIcon').className = 'fas fa-circle text-success live-indicator';
+            document.getElementById('detectionStatus').className = 'badge bg-success';
+            document.getElementById('detectionStatus').textContent = 'Active';
+            
+            // Dashboard updates
+            document.getElementById('dashStatus').textContent = 'Active';
+            document.getElementById('dashStatusIcon').className = 'fas fa-shield-alt fa-2x text-success mb-2 live-indicator';
+            
+            // Start updates
+            updateInterval = setInterval(updateStatus, 1000);
+            
+            // Show instruction to run Python script
+            alert('BlinkSense Web Interface Started!\n\nNow run your Python detection:\npython live_detector.py');
+        });
+
+        document.getElementById('stopBtn').addEventListener('click', function() {
+            this.disabled = true;
+            document.getElementById('startBtn').disabled = false;
+            
+            // Update UI
+            const detectionArea = document.getElementById('detection-area');
+            const detectionIcon = document.getElementById('detection-icon');
+            const detectionText = document.getElementById('detection-text');
+            const detectionDesc = document.getElementById('detection-desc');
+            
+            detectionArea.classList.remove('active');
+            detectionIcon.className = 'fas fa-video fa-4x text-muted mb-3';
+            detectionText.textContent = 'Ready to Monitor';
+            detectionDesc.textContent = 'Click start to begin eye tracking';
+            
+            // Update status
+            document.getElementById('systemStatus').textContent = 'Ready';
+            document.getElementById('systemStatus').className = 'text-secondary';
+            document.getElementById('statusIcon').className = 'fas fa-circle text-secondary';
+            document.getElementById('detectionStatus').className = 'badge bg-secondary';
+            document.getElementById('detectionStatus').textContent = 'Standby';
+            
+            // Dashboard updates
+            document.getElementById('dashStatus').textContent = 'Standby';
+            document.getElementById('dashStatusIcon').className = 'fas fa-shield-alt fa-2x text-secondary mb-2';
+            
+            // Stop updates
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+        });
+    </script>
+</body>
+</html>

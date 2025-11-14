@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+drowsy_env/
+.vscode/
+data/models/*.dat
+*.log

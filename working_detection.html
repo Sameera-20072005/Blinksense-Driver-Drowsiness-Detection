@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BlinkSense - Working Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #ffeef8 0%, #e8f4fd 100%);
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.9);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        h1 { color: #ff69b4; margin-bottom: 20px; }
+        #video {
+            width: 640px;
+            height: 480px;
+            border-radius: 15px;
+            background: #000;
+            margin: 20px 0;
+        }
+        .status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .status-safe { background: #d4edda; color: #155724; }
+        .status-drowsy { 
+            background: #f8d7da; 
+            color: #721c24; 
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .btn {
+            padding: 15px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            background: linear-gradient(45deg, #ff69b4, #87ceeb);
+            color: white;
+            margin: 10px;
+        }
+        .timer { font-size: 24px; font-weight: bold; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>BlinkSense - Eye Detection Test</h1>
+        <video id="video" autoplay muted></video>
+        <div>
+            <button class="btn" onclick="startDetection()">Start Detection</button>
+            <button class="btn" onclick="testAlert()">Test Alert</button>
+        </div>
+        <div id="status" class="status status-safe">Click Start Detection</div>
+        <div class="timer" id="timer">Closed Time: 0.0s</div>
+        <div id="alerts"></div>
+    </div>
+
+    <script>
+        let video, stream;
+        let isDetecting = false;
+        let eyeClosedStart = null;
+        let alertCount = 0;
+        let lastBrightness = 0;
+
+        async function startDetection() {
+            try {
+                video = document.getElementById('video');
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                
+                isDetecting = true;
+                document.getElementById('status').textContent = 'Detection Started - Keep eyes open';
+                
+                detectEyes();
+            } catch (err) {
+                alert('Camera access denied. Please allow camera and try again.');
+            }
+        }
+
+        function detectEyes() {
+            if (!isDetecting) return;
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            ctx.drawImage(video, 0, 0);
+            
+            // Get image data and calculate brightness
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            let totalBrightness = 0;
+            let pixelCount = 0;
+            
+            // Sample center area where face/eyes would be
+            const startY = Math.floor(canvas.height * 0.2);
+            const endY = Math.floor(canvas.height * 0.8);
+            const startX = Math.floor(canvas.width * 0.2);
+            const endX = Math.floor(canvas.width * 0.8);
+            
+            for (let y = startY; y < endY; y += 5) {
+                for (let x = startX; x < endX; x += 5) {
+                    const index = (y * canvas.width + x) * 4;
+                    const brightness = (data[index] + data[index + 1] + data[index + 2]) / 3;
+                    totalBrightness += brightness;
+                    pixelCount++;
+                }
+            }
+            
+            const avgBrightness = totalBrightness / pixelCount;
+            
+            // Detect significant brightness drop (eyes closing)
+            const brightnessDrop = lastBrightness > 0 && (lastBrightness - avgBrightness) > 30;
+            const eyesClosed = avgBrightness < 60 || brightnessDrop;
+            
+            lastBrightness = avgBrightness;
+            
+            const currentTime = Date.now();
+            
+            if (eyesClosed) {
+                if (eyeClosedStart === null) {
+                    eyeClosedStart = currentTime;
+                }
+                
+                const closedDuration = (currentTime - eyeClosedStart) / 1000;
+                document.getElementById('timer').textContent = `Closed Time: ${closedDuration.toFixed(1)}s`;
+                
+                if (closedDuration >= 2.0) {
+                    triggerAlert();
+                } else {
+                    document.getElementById('status').className = 'status status-safe';
+                    document.getElementById('status').textContent = `Eyes Closed - ${closedDuration.toFixed(1)}s`;
+                }
+            } else {
+                eyeClosedStart = null;
+                document.getElementById('timer').textContent = 'Closed Time: 0.0s';
+                document.getElementById('status').className = 'status status-safe';
+                document.getElementById('status').textContent = 'Eyes Open - Safe';
+            }
+            
+            setTimeout(detectEyes, 100);
+        }
+
+        function triggerAlert() {
+            alertCount++;
+            document.getElementById('status').className = 'status status-drowsy';
+            document.getElementById('status').textContent = 'DROWSY! WAKE UP!';
+            
+            // Add alert to list
+            const alertDiv = document.createElement('div');
+            alertDiv.style.cssText = 'background: #f8d7da; color: #721c24; padding: 10px; margin: 5px 0; border-radius: 5px; border-left: 4px solid #dc3545;';
+            alertDiv.innerHTML = `<strong>Alert ${alertCount}:</strong> Drowsiness detected at ${new Date().toLocaleTimeString()}`;
+            document.getElementById('alerts').appendChild(alertDiv);
+            
+            // Play alert sound
+            playAlertSound();
+            
+            // Reset after 3 seconds
+            setTimeout(() => {
+                eyeClosedStart = null;
+            }, 3000);
+        }
+
+        function playAlertSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 1);
+        }
+
+        function testAlert() {
+            triggerAlert();
+        }
+    </script>
+</body>
+</html>

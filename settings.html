@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4"><i class="fas fa-cog"></i> Settings</h1>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Detection Parameters</h5>
+            </div>
+            <div class="card-body">
+                <form>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">EAR Threshold</label>
+                            <input type="number" class="form-control" value="0.2" step="0.01" min="0.1" max="0.5">
+                            <small class="text-muted">Lower values = more sensitive detection</small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Alert Delay (seconds)</label>
+                            <input type="number" class="form-control" value="2.0" step="0.1" min="1.0" max="5.0">
+                            <small class="text-muted">Time before triggering alert</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Camera Index</label>
+                            <select class="form-control">
+                                <option value="0">Default Camera (0)</option>
+                                <option value="1">External Camera (1)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Frame Rate</label>
+                            <select class="form-control">
+                                <option value="30">30 FPS</option>
+                                <option value="25">25 FPS</option>
+                                <option value="20">20 FPS</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Alert Settings</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" checked>
+                    <label class="form-check-label">Enable Audio Alerts</label>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" checked>
+                    <label class="form-check-label">Enable Visual Alerts</label>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox">
+                    <label class="form-check-label">Send Email Notifications</label>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Alert Volume</label>
+                    <input type="range" class="form-range" min="0" max="100" value="75">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Data Storage</h5>
+            </div>
+            <div class="card-body">
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" checked>
+                    <label class="form-check-label">Save Detection Logs</label>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox">
+                    <label class="form-check-label">Save Video Recordings</label>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Data Retention (days)</label>
+                    <input type="number" class="form-control" value="30" min="1" max="365">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>System Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <span class="badge bg-success">Camera: Connected</span>
+                </div>
+                <div class="mb-3">
+                    <span class="badge bg-success">Detection: Ready</span>
+                </div>
+                <div class="mb-3">
+                    <span class="badge bg-warning">Storage: 78% Full</span>
+                </div>
+                <button class="btn btn-primary btn-sm">Test Camera</button>
+                <button class="btn btn-secondary btn-sm">Test Alert</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5>Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-success btn-block mb-2">Save Settings</button>
+                <button class="btn btn-secondary btn-block mb-2">Reset to Default</button>
+                <button class="btn btn-info btn-block mb-2">Export Config</button>
+                <button class="btn btn-warning btn-block">Import Config</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+# Original dependencies
+flask>=2.0.0
+opencv-python>=4.5.0
+numpy>=1.20.0
+dlib>=19.24.0
+imutils>=0.5.4
+scipy>=1.7.0
+playsound>=1.3.0
+cmake>=3.20.0
+argparse
+
+# New FastAPI backend dependencies
+fastapi==0.104.1
+uvicorn==0.24.0
+mediapipe==0.10.7
+websockets==12.0

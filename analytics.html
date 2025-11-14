@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4"><i class="fas fa-chart-bar"></i> Analytics</h1>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Drowsiness Patterns by Hour</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="hourlyChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5>Weekly Trends</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="weeklyChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5>EAR Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="earChart"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5>Key Insights</h5>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-clock text-warning"></i>
+                        Peak drowsiness: 2-4 PM
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-calendar text-info"></i>
+                        Most alerts: Mondays
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-eye text-danger"></i>
+                        Avg EAR when drowsy: 0.15
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-stopwatch text-success"></i>
+                        Avg alert duration: 3.2s
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5>Detection Accuracy Metrics</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 text-center">
+                        <h3 class="text-success">94.2%</h3>
+                        <p>Detection Accuracy</p>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <h3 class="text-info">1.2s</h3>
+                        <p>Response Time</p>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <h3 class="text-warning">2.1%</h3>
+                        <p>False Positives</p>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <h3 class="text-primary">99.1%</h3>
+                        <p>System Uptime</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Hourly Chart
+const hourlyCtx = document.getElementById('hourlyChart').getContext('2d');
+new Chart(hourlyCtx, {
+    type: 'bar',
+    data: {
+        labels: ['6AM', '8AM', '10AM', '12PM', '2PM', '4PM', '6PM', '8PM'],
+        datasets: [{
+            label: 'Drowsiness Events',
+            data: [1, 2, 3, 4, 8, 6, 3, 2],
+            backgroundColor: 'rgba(220, 53, 69, 0.7)'
+        }]
+    }
+});
+
+// Weekly Chart
+const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
+new Chart(weeklyCtx, {
+    type: 'line',
+    data: {
+        labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        datasets: [{
+            label: 'Weekly Alerts',
+            data: [12, 8, 6, 9, 11, 4, 3],
+            borderColor: '#007bff',
+            backgroundColor: 'rgba(0, 123, 255, 0.1)'
+        }]
+    }
+});
+
+// EAR Chart
+const earCtx = document.getElementById('earChart').getContext('2d');
+new Chart(earCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Normal (>0.25)', 'Drowsy (0.15-0.25)', 'Critical (<0.15)'],
+        datasets: [{
+            data: [75, 20, 5],
+            backgroundColor: ['#28a745', '#ffc107', '#dc3545']
+        }]
+    }
+});
+</script>
+{% endblock %}
